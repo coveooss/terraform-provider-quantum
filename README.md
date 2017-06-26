@@ -13,7 +13,7 @@ A custom provider for terraform
 Returns a list of files from a directory
 
 ```hcl
-data "quantum_list_files" {
+data "quantum_list_files" "data_files" {
     folders = ["./data"]
 }
 ```
@@ -21,7 +21,7 @@ data "quantum_list_files" {
 The output will look like this:
 
 ```sh
-data.quantum_list_files.files = ["./data/file1.txt", "./data/file2.txt"]
+data.quantum_list_files.data_files.files = ["./data/file1.txt", "./data/file2.txt"]
 ```
 
 #### Configuration variables
