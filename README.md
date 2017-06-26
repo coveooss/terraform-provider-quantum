@@ -31,6 +31,11 @@ data.quantum_list_files.data_files.files = ["./data/file1.txt", "./data/file2.tx
 - `recursive` - (Optional) - Default `false`, walk directory recursively
 - `files` - (Optional) - A static list of files to match
 
+## Installation
+
+1. Download the latest [release](github.com/coveo/terraform-provider-quantum/releases) for your platform
+2. rename the file to `terraform-provider-quantum`
+3. Copy the file to the same directory as terraform `dirname $(which terraform)` is installed
 
 ## Develop
 

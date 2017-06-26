@@ -1,14 +1,18 @@
+SOURCES = $(wildcard **/*.go)
+
 .PHONY: test
 test:
 	go test ./...
 
-.PHONY: build
-build:
+terraform-provider-quantum: $(SOURCES)
 	go build ./...
 
+.PHONY: build
+build: terraform-provider-quantum
+
 .PHONY: install
-install:
-	go install ./...
+install: terraform-provider-quantum
+	cp terraform-provider-quantum $(shell dirname $(shell which terraform))
 
 .PHONY: deploy
 deploy:
