@@ -1,7 +1,21 @@
-build:
-	go build -o /usr/local/bin/terraform-provider-quantum
+SOURCES = $(wildcard **/*.go)
 
+.PHONY: test
+test:
+	go test ./...
+
+terraform-provider-quantum: $(SOURCES)
+	go build ./...
+
+.PHONY: build
+build: terraform-provider-quantum
+
+.PHONY: install
+install: terraform-provider-quantum
+	cp terraform-provider-quantum $(shell dirname $(shell which terraform))
+
+.PHONY: deploy
 deploy:
-	GOOS=linux go build -o .pkg/terraform-provider-quantum_linux
-	GOOS=darwin go build -o .pkg/terraform-provider-quantum_darwin
-	GOOS=windows go build -o .pkg/terraform-provider-quantum.exe
+	GOARCH=amd64 GOOS=linux go build -o .pkg/terraform-provider-quantum_linux_x64
+	GOARCH=amd64 GOOS=darwin go build -o .pkg/terraform-provider-quantum_darwin_x64
+	GOARCH=amd64 GOOS=windows go build -o .pkg/terraform-provider-quantum_x64.exe
