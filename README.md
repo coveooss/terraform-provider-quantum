@@ -1,6 +1,6 @@
 # terraform-provider-quantum
-A custom provider for terraform 
 
+A custom provider for terraform.
 
 ![Coveo](https://img.shields.io/badge/Coveo-awesome-f58020.svg)
 [![Build Status](https://travis-ci.org/coveo/terraform-provider-quantum.svg?branch=master)](https://travis-ci.org/coveo/terraform-provider-quantum)
