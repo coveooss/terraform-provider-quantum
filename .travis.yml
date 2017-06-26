@@ -24,3 +24,6 @@ deploy:
   on:
     repo: coveo/terraform-provider-quantum
     tags: true
+
+notifications:
+  email: false
