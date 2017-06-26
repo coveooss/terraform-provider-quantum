@@ -1,1 +1,4 @@
+.DS_Store
 .pkg
+
+terraform-provider-quantum
