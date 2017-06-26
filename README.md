@@ -42,10 +42,6 @@ data.quantum_list_files.data_files.files = ["./data/file1.txt", "./data/file2.tx
 ```sh
 go get github.com/coveo/terraform-provider-quantum
 cd $GOPATH/src/github.com/coveo/terraform-provider-quantum
+go get ./...
 $EDITOR .
-
-# Get dependency tool
-go get -u github.com/golang/dep/cmd/dep
-# Get the dependencies
-dep ensure
 ```
