@@ -15,9 +15,9 @@ data "quantum_list_files" "templates" {
 }
 */
 
-func dataListFiles() *schema.Resource {
+func dataSourceQuantumListFiles() *schema.Resource {
 	return &schema.Resource{
-		Read: dataListFilesRead,
+		Read: dataSourceQuantumListFilesRead,
 
 		Schema: map[string]*schema.Schema{
 			"folders": &schema.Schema{
@@ -49,7 +49,7 @@ func dataListFiles() *schema.Resource {
 	}
 }
 
-func dataListFilesRead(d *schema.ResourceData, m interface{}) error {
+func dataSourceQuantumListFilesRead(d *schema.ResourceData, m interface{}) error {
 	folders := interfaceToString(d.Get("folders").([]interface{}))
 	if len(folders) == 0 {
 		folders = []string{"."}
