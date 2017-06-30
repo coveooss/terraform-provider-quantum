@@ -16,7 +16,7 @@ data "quantum_elb" "k8s_elb" {
 	matchAllTags = false
 }
 ---
-Find all ELB matching one of the given tags 
+Find all ELB matching one of the given tags
 data "quantum_elb" "k8s_elb" {
 	tag = [
 		{ "Key" : "kubernetes.io/service-name" , "Value" : "namespace/app-elb"},
@@ -105,9 +105,9 @@ func dataSourceQuantumElb() *schema.Resource {
 
 func dataSourceQuantumElbRead(d *schema.ResourceData, m interface{}) error {
 	elbconn := meta.(*AWSClient).elbconn
-	elbTag := d.Get("tag").(map[string]string)
+	elbTag := d.Get("tag").([]map[string]string)
 	onlyHealthy := d.Get("healthy").(bool)
-	matchAllTags := d.Get(":= d.Get("healthy").(bool)").(bool)
+	matchAllTags := d.Get("matchAllTags").(bool)
 
 	// Retrieve all ELB
 	describeElbOpts := &elb.DescribeLoadBalancersInput{}
