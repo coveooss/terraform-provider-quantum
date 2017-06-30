@@ -9,16 +9,48 @@ import (
 
 /*
 # Usage example:
+Find only ELB matching the given tags with at least one instance healthy
 data "quantum_elb" "k8s_elb" {
-	tag = { "Key" : "kubernetes.io/service-name" , "Value" : "namespace/app-elb"}
+	tag = [{ "Key" : "kubernetes.io/service-name" , "Value" : "namespace/app-elb"}]
 	healthy = true
+	matchAllTags = false
+}
+---
+Find all ELB matching one of the given tags 
+data "quantum_elb" "k8s_elb" {
+	tag = [
+		{ "Key" : "kubernetes.io/service-name" , "Value" : "namespace/app-elb"},
+		{ "Key" : "KubernetesCluster" , "Value" : "k8s.dev.corp"}
+	]
+	healthy = false
+	matchAllTags = false
+}
+---
+Find ELB matching all given tags with at least one healthy instance
+data "quantum_elb" "k8s_elb" {
+	tag = [
+		{ "Key" : "kubernetes.io/service-name" , "Value" : "namespace/app-elb"},
+		{ "Key" : "KubernetesCluster" , "Value" : "k8s.dev.corp"}
+	]
+	healthy = true
+	matchAllTags = True
 }
 */
 
-func findElbTag(elbTags *elb.TagDescription, queryTag map[string]string) bool {
+func findElbTag(elbTags *elb.TagDescription, queryTags []map[string]string, matchAll bool) bool {
+	matchCount := 0
 	for _, key := range elbTags.Tags {
-		if *key.Key == queryTag["Key"] && *key.Value == queryTag["Value"] {
-			return true
+		for _, tag := range queryTags {
+			if *key.Key == tag["Key"] && *key.Value == tag["Value"] {
+				if matchAll {
+					matchCount++
+					if matchCount == len(queryTags) {
+						return true
+					}
+				} else {
+					return true
+				}
+			}
 		}
 	}
 	return false
@@ -61,6 +93,9 @@ func dataSourceQuantumElb() *schema.Resource {
 					},
 				},
 			},
+			"matchAllTags": {
+				Type: schema.TypeBool,
+			},
 			"healthy": {
 				Type: schema.TypeBool,
 			},
@@ -72,6 +107,7 @@ func dataSourceQuantumElbRead(d *schema.ResourceData, m interface{}) error {
 	elbconn := meta.(*AWSClient).elbconn
 	elbTag := d.Get("tag").(map[string]string)
 	onlyHealthy := d.Get("healthy").(bool)
+	matchAllTags := d.Get(":= d.Get("healthy").(bool)").(bool)
 
 	// Retrieve all ELB
 	describeElbOpts := &elb.DescribeLoadBalancersInput{}
@@ -101,7 +137,7 @@ func dataSourceQuantumElbRead(d *schema.ResourceData, m interface{}) error {
 		i += 20
 
 		for _, tagDesc := range tagResult.TagDescriptions {
-			if findElbTag(tagDesc, elbTag) {
+			if findElbTag(tagDesc, elbTag, matchAllTags) {
 				if onlyHealthy {
 					if isHealthy(*tagDesc.LoadBalancerName) {
 						result = append(result, lbDict[*tagDesc.LoadBalancerName])
