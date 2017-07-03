@@ -2,6 +2,9 @@ package main
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/elb"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -11,29 +14,29 @@ import (
 # Usage example:
 Find only ELB matching the given tags with at least one instance healthy
 data "quantum_elb" "k8s_elb" {
-	tag = [{ "Key" : "kubernetes.io/service-name" , "Value" : "namespace/app-elb"}]
+	tags = [{ "Key" : "kubernetes.io/service-name" , "Value" : "namespace/app-elb"}]
 	healthy = true
-	matchAllTags = false
+	match_all_tags = false
 }
 ---
 Find all ELB matching one of the given tags
 data "quantum_elb" "k8s_elb" {
-	tag = [
+	tags = [
 		{ "Key" : "kubernetes.io/service-name" , "Value" : "namespace/app-elb"},
 		{ "Key" : "KubernetesCluster" , "Value" : "k8s.dev.corp"}
 	]
 	healthy = false
-	matchAllTags = false
+	match_all_tags = false
 }
 ---
 Find ELB matching all given tags with at least one healthy instance
 data "quantum_elb" "k8s_elb" {
-	tag = [
+	tags = [
 		{ "Key" : "kubernetes.io/service-name" , "Value" : "namespace/app-elb"},
 		{ "Key" : "KubernetesCluster" , "Value" : "k8s.dev.corp"}
 	]
 	healthy = true
-	matchAllTags = True
+	match_all_tags = True
 }
 */
 
@@ -57,7 +60,17 @@ func findElbTag(elbTags *elb.TagDescription, queryTags []map[string]string, matc
 }
 
 func isHealthy(elbName string) bool {
-	elbconn := meta.(*AWSClient).elbconn
+	var creds = credentials.NewChainCredentials(
+		[]credentials.Provider{
+			&credentials.EnvProvider{},
+			&credentials.SharedCredentialsProvider{},
+		})
+	var awsConfig = aws.NewConfig()
+	awsConfig.WithCredentials(creds)
+	awsConfig.WithRegion(endpoints.UsEast1RegionID)
+	var sess = session.New(awsConfig)
+	var elbconn = elb.New(sess)
+	//elbconn := meta.awsProvider.elbconn
 	input := &elb.DescribeInstanceHealthInput{
 		LoadBalancerName: aws.String(elbName),
 	}
@@ -66,7 +79,7 @@ func isHealthy(elbName string) bool {
 		errwrap.Wrapf("Error retrieving ELB health: {{err}}", err)
 	}
 	for _, i := range describeHealth.InstanceStates {
-		if *i.State == "Healthy" {
+		if *i.State == "InService" {
 			return true
 		}
 	}
@@ -77,37 +90,63 @@ func dataSourceQuantumElb() *schema.Resource {
 	return &schema.Resource{
 		Read: dataSourceQuantumElbRead,
 		Schema: map[string]*schema.Schema{
-			"tag": {
+			"tags": {
 				Type:     schema.TypeList,
-				MaxItems: 1,
+				Required: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"Key": {
 							Type:     schema.TypeString,
-							Computed: true,
+							Required: true,
 						},
 						"Value": {
 							Type:     schema.TypeString,
-							Computed: true,
+							Required: true,
 						},
 					},
 				},
 			},
-			"matchAllTags": {
-				Type: schema.TypeBool,
+			"match_all_tags": {
+				Type:     schema.TypeBool,
+				Required: true,
 			},
 			"healthy": {
-				Type: schema.TypeBool,
+				Type:     schema.TypeBool,
+				Required: true,
+			},
+			"dns_names": &schema.Schema{
+				Type:     schema.TypeList,
+				Computed: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
 			},
 		},
 	}
 }
 
 func dataSourceQuantumElbRead(d *schema.ResourceData, m interface{}) error {
-	elbconn := meta.(*AWSClient).elbconn
-	elbTag := d.Get("tag").([]map[string]string)
+	var creds = credentials.NewChainCredentials(
+		[]credentials.Provider{
+			&credentials.EnvProvider{},
+			&credentials.SharedCredentialsProvider{},
+		})
+	var awsConfig = aws.NewConfig()
+	awsConfig.WithCredentials(creds)
+	awsConfig.WithRegion(endpoints.UsEast1RegionID)
+	var sess = session.New(awsConfig)
+	var elbconn = elb.New(sess)
+
+	// Construct a map containing all tags
+	givenTags := d.Get("tags").([]interface{})
+	var elbTags []map[string]string
+	for _, t := range givenTags {
+		tempKey := t.(map[string]interface{})
+		elbTags = append(elbTags, map[string]string{"Key": tempKey["Key"].(string), "Value": tempKey["Value"].(string)})
+	}
+
 	onlyHealthy := d.Get("healthy").(bool)
-	matchAllTags := d.Get("matchAllTags").(bool)
+	matchAllTags := d.Get("match_all_tags").(bool)
 
 	// Retrieve all ELB
 	describeElbOpts := &elb.DescribeLoadBalancersInput{}
@@ -118,15 +157,17 @@ func dataSourceQuantumElbRead(d *schema.ResourceData, m interface{}) error {
 
 	// Retrieve tags for ELB
 	// In order to reduce API call we build packet of 20 ELB before asking their tags
-	lbDict := make(map[string]elb.LoadBalancerDescription)
+	lbDict := make(map[string]string)
 	i := 0
 	var result []string
 	for i < len(describeResp.LoadBalancerDescriptions) {
 		lbNames := []*string{}
+		// Build packet
 		for _, k := range describeResp.LoadBalancerDescriptions[i : i+19] {
 			lbNames = append(lbNames, k.LoadBalancerName)
 			lbDict[*k.LoadBalancerName] = *k.DNSName
 		}
+		// Request Tags
 		inputTag := &elb.DescribeTagsInput{
 			LoadBalancerNames: lbNames,
 		}
@@ -136,8 +177,9 @@ func dataSourceQuantumElbRead(d *schema.ResourceData, m interface{}) error {
 		}
 		i += 20
 
+		// Check tags and ELB matching
 		for _, tagDesc := range tagResult.TagDescriptions {
-			if findElbTag(tagDesc, elbTag, matchAllTags) {
+			if findElbTag(tagDesc, elbTags, matchAllTags) {
 				if onlyHealthy {
 					if isHealthy(*tagDesc.LoadBalancerName) {
 						result = append(result, lbDict[*tagDesc.LoadBalancerName])
@@ -147,7 +189,7 @@ func dataSourceQuantumElbRead(d *schema.ResourceData, m interface{}) error {
 		}
 	}
 
-	d.Set("dnsNames", result)
+	d.Set("dns_names", result)
 	d.SetId("-")
 	return nil
 }
