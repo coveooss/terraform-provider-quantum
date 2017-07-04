@@ -163,7 +163,13 @@ func dataSourceQuantumElbRead(d *schema.ResourceData, m interface{}) error {
 	for i < len(describeResp.LoadBalancerDescriptions) {
 		lbNames := []*string{}
 		// Build packet
-		for _, k := range describeResp.LoadBalancerDescriptions[i : i+19] {
+		endRange := 0
+		if i+19 > len(describeResp.LoadBalancerDescriptions) {
+			endRange = len(describeResp.LoadBalancerDescriptions)
+		} else {
+			endRange = i + 19
+		}
+		for _, k := range describeResp.LoadBalancerDescriptions[i:endRange] {
 			lbNames = append(lbNames, k.LoadBalancerName)
 			lbDict[*k.LoadBalancerName] = *k.DNSName
 		}
