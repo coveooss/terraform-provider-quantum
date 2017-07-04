@@ -1,19 +1,11 @@
 package main
 
 import (
-	"github.com/hashicorp/terraform/helper/schema"
 	"os"
 	"path/filepath"
-)
 
-/*
-# Usage example:
-data "quantum_list_files" "templates" {
-  folders   = ["templates"]
-  patterns  = ["*.html", "*.prop*"]
-  recursive = true
-}
-*/
+	"github.com/hashicorp/terraform/helper/schema"
+)
 
 func dataSourceQuantumListFiles() *schema.Resource {
 	return &schema.Resource{

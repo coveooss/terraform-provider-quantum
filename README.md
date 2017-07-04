@@ -10,6 +10,8 @@ A custom provider for terraform.
 
 ### quantum_list_files
 
+#### Example Usage
+
 Returns a list of files from a directory
 
 ```hcl
@@ -24,12 +26,62 @@ The output will look like this:
 data.quantum_list_files.data_files.files = ["./data/file1.txt", "./data/file2.txt"]
 ```
 
-#### Configuration variables
+#### Argument Reference
 
 - `folders` - (Optional) - The source list for folders
 - `patterns` - (Optional) - The patterns to match files, uses [golang's filepath.Match](http://godoc.org/path/filepath#Match)
 - `recursive` - (Optional) - Default `false`, walk directory recursively
-- `files` - (Optional) - A static list of files to match
+
+#### Attributes Reference
+
+- `files` - The list of matched files
+
+### quantum_elb
+
+#### Example Usage
+
+Find only ELB matching the given tags with at least one instance healthy
+
+```hcl
+data "quantum_elb" "elb1" {
+    tags    = [{ "Key" : "key1" , "Value" : "value1"}]
+    healthy = true
+}
+```
+
+Find all ELB matching one of the given tags
+
+```hcl
+data "quantum_elb" "elb2" {
+    tags = [
+        { "Key" : "key1" , "Value" : "value1"},
+        { "Key" : "key2" , "Value" : "value2"}
+    ]
+}
+```
+
+Find ELB matching all given tags with at least one healthy instance
+
+```hcl
+data "quantum_elb" "elb3" {
+    tags = [
+        { "Key" : "key1" , "Value" : "value1"},
+        { "Key" : "key2" , "Value" : "value2"}
+    ]
+    healthy        = true
+    match_all_tags = True
+}
+```
+
+The output will look like this:
+
+```sh
+```
+
+#### Argument Reference
+
+#### Attributes Reference
+
 
 ## Installation
 

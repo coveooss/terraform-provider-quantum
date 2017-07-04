@@ -11,7 +11,8 @@ func main() {
 		ProviderFunc: func() terraform.ResourceProvider {
 			return &schema.Provider{
 				DataSourcesMap: map[string]*schema.Resource{
-					"quantum_list_files":    dataSourceQuantumListFiles(),
+					"quantum_list_files": dataSourceQuantumListFiles(),
+					"quantum_elb":        dataSourceQuantumElb(),
 				},
 			}
 		},
