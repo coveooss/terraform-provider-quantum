@@ -12,7 +12,7 @@ build: terraform-provider-quantum
 
 .PHONY: install
 install: terraform-provider-quantum
-	cp terraform-provider-quantum $(shell dirname $(shell which terraform))
+	mv terraform-provider-quantum $(shell dirname $(shell which terraform))
 
 .PHONY: deploy
 deploy:
