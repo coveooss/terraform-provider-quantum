@@ -16,6 +16,6 @@ install: terraform-provider-quantum
 
 .PHONY: deploy
 deploy:
-	GOARCH=amd64 GOOS=linux go build -o .pkg/terraform-provider-quantum_linux_x64
-	GOARCH=amd64 GOOS=darwin go build -o .pkg/terraform-provider-quantum_darwin_x64
-	GOARCH=amd64 GOOS=windows go build -o .pkg/terraform-provider-quantum_x64.exe
+	GOARCH=amd64 GOOS=linux go build -o .pkg/terraform-provider-quantum_linux
+	GOARCH=amd64 GOOS=darwin go build -o .pkg/terraform-provider-quantum_darwin
+	GOARCH=amd64 GOOS=windows go build -o .pkg/terraform-provider-quantum.exe
