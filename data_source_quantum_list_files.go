@@ -1,19 +1,11 @@
 package main
 
 import (
-	"github.com/hashicorp/terraform/helper/schema"
 	"os"
 	"path/filepath"
-)
 
-/*
-# Usage example:
-data "quantum_list_files" "templates" {
-  folders   = ["templates"]
-  patterns  = ["*.html", "*.prop*"]
-  recursive = true
-}
-*/
+	"github.com/hashicorp/terraform/helper/schema"
+)
 
 func dataSourceQuantumListFiles() *schema.Resource {
 	return &schema.Resource{
@@ -64,7 +56,7 @@ func dataSourceQuantumListFilesRead(d *schema.ResourceData, m interface{}) error
 
 	var result []string
 	for _, folder := range folders {
-		if err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
+		err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
 			for _, pattern := range patterns {
 				matched, err := filepath.Match(pattern, filepath.Base(path))
 				if err != nil {
@@ -80,7 +72,9 @@ func dataSourceQuantumListFilesRead(d *schema.ResourceData, m interface{}) error
 				return filepath.SkipDir
 			}
 			return nil
-		}); err != nil {
+		})
+
+		if err != nil {
 			return err
 		}
 	}
