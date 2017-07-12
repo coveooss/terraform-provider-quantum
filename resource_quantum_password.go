@@ -18,6 +18,7 @@ func resourceQuantumPassword() *schema.Resource {
 		Create: resourceQuantumPasswordCreate,
 		Update: resourceQuantumPasswordCreate,
 		Delete: resourceQuantumPasswordDelete,
+		// Exists: resourceQuantumPasswordExists,
 
 		Schema: map[string]*schema.Schema{
 			"name": &schema.Schema{
@@ -54,22 +55,39 @@ func resourceQuantumPassword() *schema.Resource {
 			},
 			"password": &schema.Schema{
 				Type:     schema.TypeString,
-				Optional: true,
+				Computed: true,
 			},
 			"created_at": &schema.Schema{
 				Type:     schema.TypeString,
-				Optional: true,
+				Computed: true,
 			},
 		},
 	}
 }
+
+// func resourceQuantumPasswordExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+
+// 	// passwords := meta.(*QuantumMeta).passwords
+
+// 	name := d.Get("name").(string)
+// 	password := d.Get("password").(string)
+
+// 	log.Printf("Current name: %v", name)
+// 	log.Printf("Current password: %v", password)
+
+// 	passwords[name] = password
+
+// 	log.Printf("meta passwords: %-v", passwords)
+
+// 	return true, nil
+// }
 
 func resourceQuantumPasswordRead(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("resourceQuantumPasswordRead - START")
 
 	// Get parameters
-	// name := d.Get("name").(string)
+	name := d.Get("name").(string)
 	// length := d.Get("length").(int)
 	// lowercase := d.Get("lowercase").(int)
 	// uppercase := d.Get("uppercase").(int)
@@ -79,6 +97,9 @@ func resourceQuantumPasswordRead(d *schema.ResourceData, meta interface{}) error
 	// expires_in_days := d.Get("expires_in_days").(string)
 	// created_at := d.Get("created_at").(string)
 	password := d.Get("password").(string)
+
+	log.Printf("Current name inside: %v", name)
+	log.Printf("Current password inside: %v", password)
 
 	// Check last created_date and compare
 	// if created_at - now in days > expired_in_days {

@@ -8,8 +8,8 @@
 resource "quantum_password" "test_pw" {
     name = "quantom_password_key1"
     length = 20
-    password = "<computed>"
-    created_at = "<computed>"
+    // password = "<computed>"
+    // created_at = "<computed>"
     
     // Complexity
     lowercase = 2

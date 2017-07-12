@@ -18,14 +18,21 @@ func main() {
 					"quantum_password": resourceQuantumPassword(),
 				},
 
-				ConfigureFunc: configureQuantum,
+				// ConfigureFunc: configureQuantum,
 			}
 
 		},
 	})
 }
 
-func configureQuantum(providerSettings *schema.ResourceData) (interface{}, error) {
+// func configureQuantum(providerSettings *schema.ResourceData) (interface{}, error) {
 
-	return providerSettings, nil
-}
+// 	return &QuantumMeta{
+// 		passwords: make(map[string]string),
+// 	}, nil
+// }
+
+// // QuantumMeta contains existing generated password from state file
+// type QuantumMeta struct {
+// 	passwords map[string]string
+// }
