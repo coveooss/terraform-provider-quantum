@@ -7,7 +7,7 @@
 
 resource "quantum_password" "test_pw" {
     name = "quantom_password_key1"
-    length = 20
+    length = 30
     // password = "<computed>"
     // created_at = "<computed>"
     
@@ -21,6 +21,16 @@ resource "quantum_password" "test_pw" {
     expires_in_days = 90
 }
 
+resource "quantum_password" "test_pw2" {
+    name = "quantom_password_key2"
+
+    // Complexity
+    lowercase = 2
+    uppercase = 2
+
+}
+
+
 resource "aws_ssm_parameter" "quantom_password_key1" {
   name  = "quantom_password_key1"
   type  = "SecureString"
@@ -31,5 +41,4 @@ resource "aws_s3_bucket_object" "index" {
   bucket = "coveo-ndev-test"
   key = "quantom_password_key1"
   content = "${aws_ssm_parameter.quantom_password_key1.value}"
-  etag = "1234"
 }

@@ -16,9 +16,8 @@ func resourceQuantumPassword() *schema.Resource {
 	return &schema.Resource{
 		Read:   resourceQuantumPasswordRead,
 		Create: resourceQuantumPasswordCreate,
-		Update: resourceQuantumPasswordCreate,
+		Update: resourceQuantumPasswordUpdate,
 		Delete: resourceQuantumPasswordDelete,
-		// Exists: resourceQuantumPasswordExists,
 
 		Schema: map[string]*schema.Schema{
 			"name": &schema.Schema{
@@ -65,54 +64,45 @@ func resourceQuantumPassword() *schema.Resource {
 	}
 }
 
-// func resourceQuantumPasswordExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-
-// 	// passwords := meta.(*QuantumMeta).passwords
-
-// 	name := d.Get("name").(string)
-// 	password := d.Get("password").(string)
-
-// 	log.Printf("Current name: %v", name)
-// 	log.Printf("Current password: %v", password)
-
-// 	passwords[name] = password
-
-// 	log.Printf("meta passwords: %-v", passwords)
-
-// 	return true, nil
-// }
-
 func resourceQuantumPasswordRead(d *schema.ResourceData, meta interface{}) error {
 
 	log.Printf("resourceQuantumPasswordRead - START")
 
+	reset := false
+
 	// Get parameters
-	name := d.Get("name").(string)
-	// length := d.Get("length").(int)
-	// lowercase := d.Get("lowercase").(int)
-	// uppercase := d.Get("uppercase").(int)
-	// numbers := d.Get("numbers").(int)
-	// specials := d.Get("specials").(int)
+	args := getQuantumPasswordArgs(d)
 
-	// expires_in_days := d.Get("expires_in_days").(string)
-	// created_at := d.Get("created_at").(string)
-	password := d.Get("password").(string)
+	log.Printf("Current length inside: %v", args.length)
+	log.Printf("Current name inside: %v", args.name)
+	log.Printf("Current password inside: %v", args.password)
 
-	log.Printf("Current name inside: %v", name)
-	log.Printf("Current password inside: %v", password)
+	// Check if the password is conform
+	valid, err := isPasswordConform(args)
 
-	// Check last created_date and compare
-	// if created_at - now in days > expired_in_days {
-	// 	log.Printf("Generate a new password!")
-	// 	password, _ := generatePassword(length, lowercase, uppercase, numbers, specials)
-	// }
+	if !valid {
+		log.Printf("Password will be reset: %v", err)
+		reset = true
+	} else {
+		// Check last created_date and compare
+		t, _ := time.Parse("2006-01-02", args.createdAt)
 
-	// log.Printf("Password: %v\n", password)
+		diff := time.Now().Sub(t)
+		days := int(diff.Hours() / 24)
 
-	// password := "ABCE"
-	// meta.key_to_save = "Yé"
+		log.Printf("Diff Days: %v", days)
 
-	d.Set("password", password)
+		if days >= args.expiresInDays {
+			log.Printf("Generate a new password after %v days!", args.expiresInDays)
+			reset = true
+		}
+	}
+
+	if reset {
+		password, _ := generatePassword(args)
+		d.Set("password", password)
+	}
+
 	d.SetId("-")
 
 	log.Printf("resourceQuantumPasswordRead - END")
@@ -125,31 +115,49 @@ func resourceQuantumPasswordCreate(d *schema.ResourceData, meta interface{}) err
 	log.Printf("resourceQuantumPasswordCreate - START")
 
 	// Get parameters
-	// name := d.Get("name").(string)
-	length := d.Get("length").(int)
-	lowercase := d.Get("lowercase").(int)
-	uppercase := d.Get("uppercase").(int)
-	numbers := d.Get("numbers").(int)
-	specials := d.Get("specials").(int)
-
-	// expires_in_days := d.Get("expires_in_days").(string)
-	// created_at := d.Get("created_at").(string)
-	// password := d.Get("password").(string)
+	args := getQuantumPasswordArgs(d)
 
 	// Check last created_date and compare
-	// if created_at - now in days > expired_in_days {
-	// 	log.Printf("Generate a new password!")
-	password, _ := generatePassword(length, lowercase, uppercase, numbers, specials)
-	// }
+	log.Printf("Generate a new password!")
+	password, _ := generatePassword(args)
 
-	log.Printf("Password: %v\n", password)
+	log.Printf("Password: %v", password)
 
-	// password := "ABCE"
-
+	d.Set("created_at", time.Now().Format("2006-01-02"))
 	d.Set("password", password)
 	d.SetId("-")
 
 	log.Printf("resourceQuantumPasswordCreate - END")
+	return nil
+}
+
+func resourceQuantumPasswordUpdate(d *schema.ResourceData, meta interface{}) error {
+
+	log.Printf("resourceQuantumPasswordUpdate - START")
+
+	reset := false
+
+	// Get parameters
+	args := getQuantumPasswordArgs(d)
+
+	log.Printf("Current length inside: %v", args.length)
+	log.Printf("Current name inside: %v", args.name)
+	log.Printf("Current password inside: %v", args.password)
+
+	// Check if the password is conform
+	valid, err := isPasswordConform(args)
+
+	if !valid {
+		log.Printf("Password will be reset: %v", err)
+		reset = true
+	}
+
+	if reset {
+		password, _ := generatePassword(args)
+		d.Set("password", password)
+	}
+
+	log.Printf("resourceQuantumPasswordUpdate - END")
 	return nil
 }
 
@@ -163,7 +171,14 @@ const uppercaseBytes = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const numberBytes = "0123456789"
 const specialBytes = "!%@#$"
 
-func generatePassword(length int, lowercase int, uppercase int, numbers int, specials int) (string, error) {
+func generatePassword(args *QuantumPasswordArgs) (string, error) {
+
+	length := args.length
+	lowercase := args.lowercase
+	uppercase := args.uppercase
+	numbers := args.numbers
+	specials := args.specials
+
 	l := lowercase + uppercase + numbers + specials
 	r := length - l
 
@@ -175,22 +190,22 @@ func generatePassword(length int, lowercase int, uppercase int, numbers int, spe
 
 	if r > 0 {
 		rand.Seed(int64(time.Now().Nanosecond()))
-		if lowercase > 0 {
+		if lowercase > -1 {
 			add := rand.Intn(r)
 			lowercase += add
 			r -= add
 		}
-		if r > 0 && uppercase > 0 {
+		if r > 0 && uppercase > -1 {
 			add := rand.Intn(r)
 			uppercase += add
 			r -= add
 		}
-		if r > 0 && numbers > 0 {
+		if r > 0 && numbers > -1 {
 			add := rand.Intn(r)
 			numbers += add
 			r -= add
 		}
-		if r > 0 && specials > 0 {
+		if r > 0 && specials > -1 {
 			specials += r
 		}
 	}
@@ -226,39 +241,109 @@ func shuffle(password string) string {
 	return strings.Join(arr, "")
 }
 
-func isPasswordConform(password string, length int, lowercase int, uppercase int, numbers int, specials int) (bool, error) {
+func isPasswordConform(args *QuantumPasswordArgs) (bool, error) {
 
-	if len(password) < length {
-		return false, fmt.Errorf("password does not match minimum length requirement (%v < %v)", len(password), length)
+	log.Printf("bleh pw: %v", len(args.password))
+	log.Printf("bleh lt: %v", args.length)
+	if len(args.password) < args.length {
+		return false, fmt.Errorf("password does not match minimum length requirement (%v < %v)", len(args.password), args.length)
 	}
 
 	re := regexp.MustCompile("[a-z]")
-	l := len(re.FindAllString(password, -1))
+	l := len(re.FindAllString(args.password, -1))
 
-	if l < lowercase {
-		return false, fmt.Errorf("password does not match minimum requirement for lowercase length (%v < %v)", l, lowercase)
+	if l < args.lowercase {
+		return false, fmt.Errorf("password does not match minimum requirement for lowercase length (%v < %v)", l, args.lowercase)
 	}
 
 	re = regexp.MustCompile("[A-Z]")
-	u := len(re.FindAllString(password, -1))
+	u := len(re.FindAllString(args.password, -1))
 
-	if u < uppercase {
-		return false, fmt.Errorf("password does not match minimum requirement for uppercase length (%v < %v)", u, uppercase)
+	if u < args.uppercase {
+		return false, fmt.Errorf("password does not match minimum requirement for uppercase length (%v < %v)", u, args.uppercase)
 	}
 
 	re = regexp.MustCompile("[0-9]")
-	n := len(re.FindAllString(password, -1))
+	n := len(re.FindAllString(args.password, -1))
 
-	if n < numbers {
-		return false, fmt.Errorf("password does not match minimum requirement for numbers length (%v < %v)", n, numbers)
+	if n < args.numbers {
+		return false, fmt.Errorf("password does not match minimum requirement for numbers length (%v < %v)", n, args.numbers)
 	}
 
 	re = regexp.MustCompile(fmt.Sprintf("[%s]", specialBytes))
-	s := len(re.FindAllString(password, -1))
+	s := len(re.FindAllString(args.password, -1))
 
-	if s < specials {
-		return false, fmt.Errorf("password does not match minimum requirement for special characters length (%v < %v)", s, specials)
+	if s < args.specials {
+		return false, fmt.Errorf("password does not match minimum requirement for special characters length (%v < %v)", s, args.specials)
 	}
 
 	return true, nil
+}
+
+func getQuantumPasswordArgs(d *schema.ResourceData) *QuantumPasswordArgs {
+
+	args := &QuantumPasswordArgs{
+		name:          d.Get("name").(string),
+		length:        d.Get("length").(int),
+		lowercase:     d.Get("lowercase").(int),
+		uppercase:     d.Get("uppercase").(int),
+		numbers:       d.Get("numbers").(int),
+		specials:      d.Get("specials").(int),
+		expiresInDays: d.Get("expires_in_days").(int),
+		password:      d.Get("password").(string),
+		createdAt:     d.Get("created_at").(string),
+	}
+
+	// Setting some default for unspecified values
+	if args.length == 0 {
+		args.length = 20
+	}
+
+	// If specified 0, exclude some criterias, otherwise set default
+	// if len(length) == 0 {
+	// 	args.length = 20
+	// }
+	// if len(lowercase) == 0 {
+	// 	args.lowercase = -1
+	// } else {
+	// 	args.lowercase = d.Get("lowercase").(int)
+	// }
+	// if len(uppercase) == 0 {
+	// 	args.uppercase = -1
+	// } else {
+	// 	args.uppercase = d.Get("uppercase").(int)
+	// }
+	// if len(numbers) == 0 {
+	// 	args.numbers = -1
+	// } else {
+	// 	args.numbers = d.Get("numbers").(int)
+	// }
+	// if len(specials) == 0 {
+	// 	args.specials = -1
+	// } else {
+	// 	args.specials = d.Get("specials").(int)
+	// }
+	// if len(expiresInDays) == 0 {
+	// 	args.expiresInDays = 30
+	// } else {
+	// 	args.expiresInDays = d.Get("expires_in_days").(int)
+	// }
+
+	log.Printf("QuantumArgs: %-v", args)
+
+	return args
+
+}
+
+// QuantumPasswordArgs contains provided terraform arguments
+type QuantumPasswordArgs struct {
+	name          string
+	length        int
+	lowercase     int
+	uppercase     int
+	numbers       int
+	specials      int
+	expiresInDays int
+	password      string
+	createdAt     string
 }
