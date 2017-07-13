@@ -18,6 +18,7 @@ func resourceQuantumPassword() *schema.Resource {
 		Create: resourceQuantumPasswordCreate,
 		Update: resourceQuantumPasswordUpdate,
 		Delete: resourceQuantumPasswordDelete,
+		Exists: resourceQuantumPasswordExists,
 
 		Schema: map[string]*schema.Schema{
 			"name": &schema.Schema{
@@ -117,7 +118,6 @@ func resourceQuantumPasswordCreate(d *schema.ResourceData, meta interface{}) err
 	// Get parameters
 	args := getQuantumPasswordArgs(d)
 
-	// Check last created_date and compare
 	log.Printf("Generate a new password!")
 	password, _ := generatePassword(args)
 
@@ -135,27 +135,7 @@ func resourceQuantumPasswordUpdate(d *schema.ResourceData, meta interface{}) err
 
 	log.Printf("resourceQuantumPasswordUpdate - START")
 
-	reset := false
-
-	// Get parameters
-	args := getQuantumPasswordArgs(d)
-
-	log.Printf("Current length inside: %v", args.length)
-	log.Printf("Current name inside: %v", args.name)
-	log.Printf("Current password inside: %v", args.password)
-
-	// Check if the password is conform
-	valid, err := isPasswordConform(args)
-
-	if !valid {
-		log.Printf("Password will be reset: %v", err)
-		reset = true
-	}
-
-	if reset {
-		password, _ := generatePassword(args)
-		d.Set("password", password)
-	}
+	// Normally, the Read will have set the new password
 
 	log.Printf("resourceQuantumPasswordUpdate - END")
 	return nil
@@ -163,6 +143,20 @@ func resourceQuantumPasswordUpdate(d *schema.ResourceData, meta interface{}) err
 
 func resourceQuantumPasswordDelete(d *schema.ResourceData, meta interface{}) error {
 	return nil
+}
+
+func resourceQuantumPasswordExists(d *schema.ResourceData, meta interface{}) (bool, error) {
+	// Try to create a password with provided info
+	// Need to crash early for invalid resource parameters
+
+	log.Printf("resourceQuantumPasswordExists - START")
+
+	pw, err := generatePassword(getQuantumPasswordArgs(d))
+
+	log.Printf("resourceQuantumPasswordExists - END")
+
+	return len(pw) > 0, err
+
 }
 
 // To generate password
@@ -173,49 +167,90 @@ const specialBytes = "!%@#$"
 
 func generatePassword(args *QuantumPasswordArgs) (string, error) {
 
+	log.Printf("generatePassword - START - %-v", args)
+
 	length := args.length
 	lowercase := args.lowercase
 	uppercase := args.uppercase
 	numbers := args.numbers
 	specials := args.specials
 
-	l := lowercase + uppercase + numbers + specials
+	// To avoid some chars, -1 can be passed for this group, skip them from count
+
+	l := 0
+	if lowercase > 0 {
+		l += lowercase
+	}
+	if uppercase > 0 {
+		l += uppercase
+	}
+	if numbers > 0 {
+		l += numbers
+	}
+	if specials > 0 {
+		l += specials
+	}
+
 	r := length - l
 
 	password := ""
 
-	if r < 0 {
+	if r < 0 || (lowercase+uppercase+numbers+specials) == -4 {
 		return "", errors.New("the password length cannot meet minimal requirement")
 	}
 
-	if r > 0 {
-		rand.Seed(int64(time.Now().Nanosecond()))
+	rand.Seed(int64(time.Now().Nanosecond()))
+	for r > 0 {
 		if lowercase > -1 {
 			add := rand.Intn(r)
+			if add == 0 {
+				add = 1
+			}
 			lowercase += add
 			r -= add
 		}
 		if r > 0 && uppercase > -1 {
 			add := rand.Intn(r)
+			if add == 0 {
+				add = 1
+			}
 			uppercase += add
 			r -= add
 		}
 		if r > 0 && numbers > -1 {
 			add := rand.Intn(r)
+			if add == 0 {
+				add = 1
+			}
 			numbers += add
 			r -= add
 		}
 		if r > 0 && specials > -1 {
-			specials += r
+			add := rand.Intn(r)
+			if add == 0 {
+				add = 1
+			}
+			specials += add
+			r -= add
 		}
 	}
 
-	password += randStringBytes(lowercase, lowercaseBytes)
-	password += randStringBytes(uppercase, uppercaseBytes)
-	password += randStringBytes(numbers, numberBytes)
-	password += randStringBytes(specials, specialBytes)
+	if lowercase > 0 {
+		password += randStringBytes(lowercase, lowercaseBytes)
+	}
+	if uppercase > 0 {
+		password += randStringBytes(uppercase, uppercaseBytes)
+	}
+	if numbers > 0 {
+		password += randStringBytes(numbers, numberBytes)
+	}
+	if specials > 0 {
+		password += randStringBytes(specials, specialBytes)
+	}
 
 	password = shuffle(password)
+
+	log.Printf("generatePassword - END - %v", password)
 
 	return password, nil
 }
