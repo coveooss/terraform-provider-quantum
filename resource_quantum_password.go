@@ -17,7 +17,6 @@ func resourceQuantumPassword() *schema.Resource {
 		Create: resourceQuantumPasswordCreate,
 		Update: resourceQuantumPasswordUpdate,
 		Delete: resourceQuantumPasswordDelete,
-		Exists: resourceQuantumPasswordExists,
 
 		Schema: map[string]*schema.Schema{
 			"name": &schema.Schema{
@@ -45,23 +44,18 @@ func resourceQuantumPassword() *schema.Resource {
 }
 
 func resourceQuantumPasswordRead(d *schema.ResourceData, meta interface{}) error {
-
-	log.Printf("resourceQuantumPasswordRead - START")
-
+	// The password change happens on the Read otherwise
+	// there is no way to know that it is expired.
 	reset := false
 
 	// Get parameters
 	args := getQuantumPasswordArgs(d)
 
-	log.Printf("Current length inside: %v", args.length)
-	log.Printf("Current name inside: %v", args.name)
-	log.Printf("Current password inside: %v", args.password)
-
 	// Check if the password is conform
 	valid, err := isPasswordConform(args)
 
 	if !valid {
-		log.Printf("Password will be reset: %v", err)
+		log.Printf("Password will be reset (attribute changes): %v", err)
 		reset = true
 	} else {
 		// Check last created_date and compare
@@ -86,62 +80,36 @@ func resourceQuantumPasswordRead(d *schema.ResourceData, meta interface{}) error
 
 	d.SetId("-")
 
-	log.Printf("resourceQuantumPasswordRead - END")
-
 	return nil
 }
 
 func resourceQuantumPasswordCreate(d *schema.ResourceData, meta interface{}) error {
 
-	log.Printf("resourceQuantumPasswordCreate - START")
-
 	// Get parameters
 	args := getQuantumPasswordArgs(d)
 
-	log.Printf("Generate a new password!")
 	password, _ := generatePassword(args)
 
-	log.Printf("Password: %v", password)
-
-	d.Set("created_at", time.Now().Format("2006-01-02"))
 	d.Set("password", password)
+	d.Set("created_at", time.Now().Format("2006-01-02"))
 	d.SetId("-")
 
-	log.Printf("resourceQuantumPasswordCreate - END")
 	return nil
 }
 
 func resourceQuantumPasswordUpdate(d *schema.ResourceData, meta interface{}) error {
-
-	log.Printf("resourceQuantumPasswordUpdate - START")
 
 	// Normally, the Read will have set the new password
 	// but when attributes are updated, the check is done
 	// on previous attributes instead of new ones, so
 	// recall it with new one to get password updated
 	// with latest values.
-	err := resourceQuantumPasswordRead(d, meta)
 
-	log.Printf("resourceQuantumPasswordUpdate - END")
-	return err
+	return resourceQuantumPasswordRead(d, meta)
 }
 
 func resourceQuantumPasswordDelete(d *schema.ResourceData, meta interface{}) error {
 	return nil
-}
-
-func resourceQuantumPasswordExists(d *schema.ResourceData, meta interface{}) (bool, error) {
-	// Try to create a password with provided info
-	// Need to crash early for invalid resource parameters
-
-	log.Printf("resourceQuantumPasswordExists - START")
-
-	pw, err := generatePassword(getQuantumPasswordArgs(d))
-
-	log.Printf("resourceQuantumPasswordExists - END")
-
-	return len(pw) > 0, err
-
 }
 
 // To generate password
@@ -151,8 +119,6 @@ const numberBytes = "0123456789"
 const specialBytes = "!%@#$"
 
 func generatePassword(args *QuantumPasswordArgs) (string, error) {
-
-	log.Printf("generatePassword - START - %-v", args)
 
 	if args.length < 4 {
 		return "", errors.New("the password must be at least 4 chars long")
@@ -168,8 +134,6 @@ func generatePassword(args *QuantumPasswordArgs) (string, error) {
 	password += randStringBytes(assign+args.length%4, specialBytes)
 
 	password = shuffle(password)
-
-	log.Printf("generatePassword - END - %v", password)
 
 	return password, nil
 }
@@ -197,8 +161,6 @@ func shuffle(password string) string {
 
 func isPasswordConform(args *QuantumPasswordArgs) (bool, error) {
 
-	log.Printf("isPasswordConform pw: %v", len(args.password))
-	log.Printf("isPasswordConform lt: %v", args.length)
 	if len(args.password) != args.length {
 		return false, fmt.Errorf("password does not match length requirement (%v != %v)", len(args.password), args.length)
 	}
@@ -220,8 +182,6 @@ func getQuantumPasswordArgs(d *schema.ResourceData) *QuantumPasswordArgs {
 	if args.length == 0 {
 		args.length = 20
 	}
-
-	log.Printf("QuantumArgs: %v", args)
 
 	return args
 

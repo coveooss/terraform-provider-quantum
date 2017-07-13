@@ -44,6 +44,45 @@ data.quantum_list_files.data_files.files = ["./data/file1.txt", "./data/file2.do
 
 - `files` - The list of matched files
 
+### quantum_password
+
+This resource will generate a password with lowercase, uppercase, numbers and special characters mathing the specified `length`. It will also rotate the password every `'n'` days based on the `expires_in_days` attribute.
+
+#### Example Usage
+
+Returns a list of files from a directory
+
+```hcl
+resource "quantum_password" "rds_backup_db_password" {
+    length          = 10
+    expires_in_days = 90
+}
+```
+
+The output will look like this:
+
+```sh
++ quantum_password.rds_backup_db_password
+    created_at:      "<computed>"
+    expires_in_days: "90"
+    password:        "<computed>"
+```
+
+#### Argument Reference
+
+- `length`          - (Optional) - Password length [default `20`]
+- `expires_in_days` - (Optional) - Number of days before a new password gets generated. [default `0`]
+
+> An `expires_in_days` set to `0` means the password expires on each run
+
+#### Attributes Reference
+
+- `password` - Attribute to use in your other resources to set the password
+
+
+> Note that on *quantum_password* attribute change, you need to run `apply` twice to get the new password propagated to dependant resources. ([Comment on this behavior](https://github.com/hashicorp/terraform/issues/1123#issuecomment-77442647))
+
+
 ## Develop
 
 ```sh
