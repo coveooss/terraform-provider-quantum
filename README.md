@@ -50,7 +50,7 @@ This resource will generate a password with lowercase, uppercase, numbers and sp
 
 #### Example Usage
 
-Returns a list of files from a directory
+Generates a rnadom password to be used by other resources
 
 ```hcl
 resource "quantum_password" "rds_backup_db_password" {
