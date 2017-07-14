@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/terraform/helper/schema"
 )
+
+const minimumCharsPerCategory = 2
 
 func resourceQuantumPassword() *schema.Resource {
 	return &schema.Resource{
@@ -65,7 +66,6 @@ func update(d *schema.ResourceData, update bool) error {
 	// Get parameters
 	args := getQuantumPasswordArgs(d)
 
-	var err error
 	t, err := time.Parse(time.RFC3339, args.lastUpdate)
 	if err != nil {
 		log.Printf("Unable to parse the last generation date (%s), resetting password", args.lastUpdate)
@@ -108,7 +108,15 @@ func generatePassword(args *QuantumPasswordArgs) (string, *time.Time, error) {
 
 	var password string
 	for i := 0; i < args.length; i++ {
-		chars := categories[i%len(categories)]
+		var group int
+		if i < len(categories)*minimumCharsPerCategory {
+			// We take at least a minimum number of characters of each categories
+			group = i % len(categories)
+		} else {
+			// Afterwhile, we pick them randomly
+			group = rand.Intn(len(categories))
+		}
+		chars := categories[group]
 		password += string(chars[rand.Intn(len(chars))])
 	}
 
@@ -119,14 +127,14 @@ func generatePassword(args *QuantumPasswordArgs) (string, *time.Time, error) {
 func shuffle(password string) string {
 	rand.Seed(int64(time.Now().Nanosecond()))
 
-	arr := strings.Split(password, "")
+	arr := []byte(password)
 
 	for i := 0; i < len(arr); i++ {
 		j := rand.Intn(len(arr))
 		arr[i], arr[j] = arr[j], arr[i]
 	}
 
-	return strings.Join(arr, "")
+	return string(arr)
 }
 
 func getQuantumPasswordArgs(d *schema.ResourceData) *QuantumPasswordArgs {
