@@ -11,7 +11,3 @@ func interfaceToString(source []interface{}) (result []string) {
 	}
 	return
 }
-
-// func dump(v interface{}) {
-// 	js, _ := json.Marshal(v)
-// }

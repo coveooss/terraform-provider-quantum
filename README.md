@@ -70,14 +70,15 @@ The output will look like this:
 
 #### Argument Reference
 
-- `length`          - (Optional) - Password length [default `20`]
-- `expires_in_days` - (Optional) - Number of days before a new password gets generated. [default `0`]
+- `length`   - (Optional) - Password length [default `20`]
+- `rotation` - (Optional) - Number of days before a new password gets generated. [default `0` = no rotation]
 
-> An `expires_in_days` set to `0` means the password expires on each run
+> A `rotation` set to negative number means the password expires on each run
 
 #### Attributes Reference
 
-- `password` - Attribute to use in your other resources to set the password
+- `password`    - Attribute to use in your other resources to set the password
+- `last_update` - Last generation date of the password
 
 
 > Note that on *quantum_password* attribute change, you need to run `apply` twice to get the new password propagated to dependant resources. ([Comment on this behavior](https://github.com/hashicorp/terraform/issues/1123#issuecomment-77442647))

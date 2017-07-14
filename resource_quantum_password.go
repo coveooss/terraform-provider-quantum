@@ -1,7 +1,8 @@
 package main
 
 import (
-	"errors"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"math/rand"
@@ -13,21 +14,17 @@ import (
 
 func resourceQuantumPassword() *schema.Resource {
 	return &schema.Resource{
-		Read:   resourceQuantumPasswordRead,
 		Create: resourceQuantumPasswordCreate,
-		Update: resourceQuantumPasswordUpdate,
-		Delete: resourceQuantumPasswordDelete,
+		Read:   func(d *schema.ResourceData, m interface{}) error { return update(d, false) },
+		Update: func(d *schema.ResourceData, m interface{}) error { return update(d, true) },
+		Delete: func(*schema.ResourceData, interface{}) error { return nil },
 
 		Schema: map[string]*schema.Schema{
-			"name": &schema.Schema{
-				Type:     schema.TypeString,
-				Optional: true,
-			},
 			"length": &schema.Schema{
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
-			"expires_in_days": &schema.Schema{
+			"rotation": &schema.Schema{
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
@@ -35,7 +32,11 @@ func resourceQuantumPassword() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
-			"created_at": &schema.Schema{
+			"previous_password": &schema.Schema{
+				Type:     schema.TypeString,
+				Computed: true,
+			},
+			"last_update": &schema.Schema{
 				Type:     schema.TypeString,
 				Computed: true,
 			},
@@ -43,139 +44,96 @@ func resourceQuantumPassword() *schema.Resource {
 	}
 }
 
-func resourceQuantumPasswordRead(d *schema.ResourceData, meta interface{}) error {
-	// The password change happens on the Read otherwise
-	// there is no way to know that it is expired.
-	reset := false
+func resourceQuantumPasswordCreate(d *schema.ResourceData, meta interface{}) error {
+	// Get parameters
+	args := getQuantumPasswordArgs(d)
+
+	password, genDate, err := generatePassword(args)
+
+	if err == nil {
+		d.Set("password", password)
+		d.Set("last_update", genDate.Format(time.RFC3339))
+		d.SetId(getMD5Hash(fmt.Sprintf("%s-%v", password, d.Get("last_update"))))
+	}
+
+	return err
+}
+
+func update(d *schema.ResourceData, update bool) error {
+	reset := d.HasChange("length")
 
 	// Get parameters
 	args := getQuantumPasswordArgs(d)
 
-	// Check if the password is conform
-	valid, err := isPasswordConform(args)
-
-	if !valid {
-		log.Printf("Password will be reset (attribute changes): %v", err)
+	var err error
+	t, err := time.Parse(time.RFC3339, args.lastUpdate)
+	if err != nil {
+		log.Printf("Unable to parse the last generation date (%s), resetting password", args.lastUpdate)
 		reset = true
-	} else {
-		// Check last created_date and compare
-		t, _ := time.Parse("2006-01-02", args.createdAt)
+	}
 
-		diff := time.Now().Sub(t)
-		days := int(diff.Hours() / 24)
-
-		log.Printf("Diff Days: %v", days)
-
-		if days >= args.expiresInDays {
-			log.Printf("Generate a new password after %v days!", args.expiresInDays)
-			reset = true
-		}
+	if args.rotation != 0 && int(time.Now().Sub(t).Hours()/24) >= args.rotation {
+		log.Printf("Generate a new password after %v days", args.rotation)
+		reset = true
 	}
 
 	if reset {
-		password, _ := generatePassword(args)
-		d.Set("password", password)
-		d.Set("created_at", time.Now().Format("2006-01-02"))
+		if !update {
+			// If the reset is caused by the read operation, we keep the previous password
+			// in order to be able to restore it if the reset should not have been done.
+			// This could happen if according to the previous rotation period, the password
+			// was expired, but was not really expired if we consider the new rotation (that
+			// is only available during the update phase).
+			d.Set("previous_password", d.Get("password"))
+		}
+		err = resourceQuantumPasswordCreate(d, nil)
+	} else if update {
+		previous := d.Get("previous_password")
+		if previous != "" {
+			// This was a false update, so we bring back the previous password
+			d.Set("password", previous)
+			d.Set("previous_password", "")
+		}
 	}
 
-	d.SetId("-")
-
-	return nil
+	return err
 }
 
-func resourceQuantumPasswordCreate(d *schema.ResourceData, meta interface{}) error {
+func generatePassword(args *QuantumPasswordArgs) (string, *time.Time, error) {
+	rand.Seed(int64(time.Now().Nanosecond()))
 
-	// Get parameters
-	args := getQuantumPasswordArgs(d)
-
-	password, _ := generatePassword(args)
-
-	d.Set("password", password)
-	d.Set("created_at", time.Now().Format("2006-01-02"))
-	d.SetId("-")
-
-	return nil
-}
-
-func resourceQuantumPasswordUpdate(d *schema.ResourceData, meta interface{}) error {
-
-	// Normally, the Read will have set the new password
-	// but when attributes are updated, the check is done
-	// on previous attributes instead of new ones, so
-	// recall it with new one to get password updated
-	// with latest values.
-
-	return resourceQuantumPasswordRead(d, meta)
-}
-
-func resourceQuantumPasswordDelete(d *schema.ResourceData, meta interface{}) error {
-	return nil
-}
-
-// To generate password
-const lowercaseBytes = "abcdefghijklmnopqrstuvwxyz"
-const uppercaseBytes = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-const numberBytes = "0123456789"
-const specialBytes = "!%@#$"
-
-func generatePassword(args *QuantumPasswordArgs) (string, error) {
-
-	if args.length < 4 {
-		return "", errors.New("the password must be at least 4 chars long")
+	if args.length < len(categories) {
+		return "", nil, fmt.Errorf("The password must be at least %d chars long", len(categories))
 	}
 
-	assign := args.length / 4
-
-	password := ""
-
-	password += randStringBytes(assign, lowercaseBytes)
-	password += randStringBytes(assign, uppercaseBytes)
-	password += randStringBytes(assign, numberBytes)
-	password += randStringBytes(assign+args.length%4, specialBytes)
-
-	password = shuffle(password)
-
-	return password, nil
-}
-
-func randStringBytes(n int, chars string) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = chars[rand.Intn(len(chars))]
+	var password string
+	for i := 0; i < args.length; i++ {
+		chars := categories[i%len(categories)]
+		password += string(chars[rand.Intn(len(chars))])
 	}
-	return string(b)
+
+	generated := time.Now()
+	return shuffle(password)[:args.length], &generated, nil
 }
 
 func shuffle(password string) string {
-	arr := strings.Split(password, "")
-	t := time.Now()
-	rand.Seed(int64(t.Nanosecond())) // no shuffling without this line
+	rand.Seed(int64(time.Now().Nanosecond()))
 
-	for i := len(arr) - 1; i > 0; i-- {
-		j := rand.Intn(i)
+	arr := strings.Split(password, "")
+
+	for i := 0; i < len(arr); i++ {
+		j := rand.Intn(len(arr))
 		arr[i], arr[j] = arr[j], arr[i]
 	}
 
 	return strings.Join(arr, "")
 }
 
-func isPasswordConform(args *QuantumPasswordArgs) (bool, error) {
-
-	if len(args.password) != args.length {
-		return false, fmt.Errorf("password does not match length requirement (%v != %v)", len(args.password), args.length)
-	}
-
-	return true, nil
-}
-
 func getQuantumPasswordArgs(d *schema.ResourceData) *QuantumPasswordArgs {
-
 	args := &QuantumPasswordArgs{
-		name:          d.Get("name").(string),
-		length:        d.Get("length").(int),
-		expiresInDays: d.Get("expires_in_days").(int),
-		password:      d.Get("password").(string),
-		createdAt:     d.Get("created_at").(string),
+		length:     d.Get("length").(int),
+		rotation:   d.Get("rotation").(int),
+		lastUpdate: d.Get("last_update").(string),
 	}
 
 	// Setting some default for unspecified values
@@ -184,14 +142,34 @@ func getQuantumPasswordArgs(d *schema.ResourceData) *QuantumPasswordArgs {
 	}
 
 	return args
-
 }
 
 // QuantumPasswordArgs contains provided terraform arguments
 type QuantumPasswordArgs struct {
-	name          string
-	length        int
-	expiresInDays int
-	password      string
-	createdAt     string
+	length     int
+	rotation   int
+	lastUpdate string
+}
+
+var (
+	baseSet    = map[rune]int{'a': 26, 'A': 26, '0': 10, '!': 15}
+	categories = initializeCharSet()
+)
+
+func initializeCharSet() []string {
+	categories := make([]string, len(baseSet))
+	categoryCount := 0
+	for char, count := range baseSet {
+		for i := 0; i < count; i++ {
+			categories[categoryCount] += string(char + rune(i))
+		}
+		categoryCount++
+	}
+	return categories
+}
+
+func getMD5Hash(text string) string {
+	hasher := md5.New()
+	hasher.Write([]byte(text))
+	return hex.EncodeToString(hasher.Sum(nil))
 }
