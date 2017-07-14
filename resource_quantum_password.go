@@ -2,10 +2,11 @@ package main
 
 import (
 	"crypto/md5"
+	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"log"
-	"math/rand"
+	"math/big"
 	"time"
 
 	"github.com/hashicorp/terraform/helper/schema"
@@ -100,8 +101,6 @@ func update(d *schema.ResourceData, update bool) error {
 }
 
 func generatePassword(args *QuantumPasswordArgs) (string, *time.Time, error) {
-	rand.Seed(int64(time.Now().Nanosecond()))
-
 	if args.length < len(categories) {
 		return "", nil, fmt.Errorf("The password must be at least %d chars long", len(categories))
 	}
@@ -114,10 +113,10 @@ func generatePassword(args *QuantumPasswordArgs) (string, *time.Time, error) {
 			group = i % len(categories)
 		} else {
 			// Afterwhile, we pick them randomly
-			group = rand.Intn(len(categories))
+			group = randInt(len(categories))
 		}
 		chars := categories[group]
-		password += string(chars[rand.Intn(len(chars))])
+		password += string(chars[randInt(len(chars))])
 	}
 
 	generated := time.Now()
@@ -125,16 +124,20 @@ func generatePassword(args *QuantumPasswordArgs) (string, *time.Time, error) {
 }
 
 func shuffle(password string) string {
-	rand.Seed(int64(time.Now().Nanosecond()))
 
 	arr := []byte(password)
 
 	for i := 0; i < len(arr); i++ {
-		j := rand.Intn(len(arr))
+		j := randInt(len(arr))
 		arr[i], arr[j] = arr[j], arr[i]
 	}
 
 	return string(arr)
+}
+
+func randInt(length int) int {
+	i, _ := rand.Int(rand.Reader, big.NewInt(int64(length)))
+	return int(i.Int64())
 }
 
 func getQuantumPasswordArgs(d *schema.ResourceData) *QuantumPasswordArgs {
