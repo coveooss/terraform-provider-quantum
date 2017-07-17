@@ -46,28 +46,18 @@ data.quantum_list_files.data_files.files = ["./data/file1.txt", "./data/file2.do
 
 ### quantum_password
 
-This resource will generate a password with lowercase, uppercase, numbers and special characters mathing the specified `length`. It will also rotate the password every `'n'` days based on the `expires_in_days` attribute.
+This resource will generate a password with lowercase, uppercase, numbers and special characters mathing the specified `length`. It will also rotate the password every `'n'` days based on the `rotation` attribute.
 
 #### Example Usage
 
-Generates a rnadom password to be used by other resources
+Generates a random password to be used by other resources
 
 ```hcl
 resource "quantum_password" "rds_backup_db_password" {
-    length          = 10
-    expires_in_days = 90
+    length   = 10
+    rotation = 90
 }
 ```
-
-The output will look like this:
-
-```sh
-+ quantum_password.rds_backup_db_password
-    created_at:      "<computed>"
-    expires_in_days: "90"
-    password:        "<computed>"
-```
-
 #### Argument Reference
 
 - `length`   - (Optional) - Password length [default `20`]
