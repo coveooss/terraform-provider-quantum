@@ -1,31 +1,17 @@
 language: go
 go:
-- 1.8
+- 1.8.x
 
 sudo: false
 
 install:
 - go get ./...
 
-script: 
+script:
 - make test
-- make build
-- go build -o terraform-provider-quantum_linux_x64 ./...
-- GOARCH=amd64 GOOS=darwin go build -o terraform-provider-quantum_darwin_x64 ./...
-- GOARCH=amd64 GOOS=windows go build -o terraform-provider-quantum_x64.exe ./...
 
-deploy:
-  provider: releases
-  skip_cleanup: true
-  api_key:
-    secure: iuBKRcYsLz80uN6rdLclUQR+otxklEosKRRr4eMQ22UXeSKiwtM3cSMak5ActlDtekmprWz3BZEuUfQizzJnGFBJ6sFTT54bIxtkrmabHiaWQqsudOUVwiRjQ15ro7cxrBMihfTAeBy6puB04CGzsrTwNaLRmpXZD3/2Hfb+VrQeyn9Ce2dslHR39CDsaHh6t1S4egLTdtSBYIENXlgRWg/pzP4xP+3ZLsfPeiqhVFdDv89qYZCb0EhgMABxDwg9/kxCfLlk0D2PUUT1mdUcSTrtHKR2WdQz9XrPY5sjNJZBTd14qQk1HKhK7VGWKfIk2j2inDKTJzz5FSv0OvOpnep2Pe6PIGRWEi4gC/A9mlH/zMpAzdEMi+ksYCRzUy6jXvvQESJSrJMdno+aQkNnuGk+8n+F8/t6MPP9Pgz+i766N69lpwtleRHGEwEkCeHBGJzr+fgB/Mfa216NbBqna9CpTbOTalvPvBbHq3AmvS5gGxLN/IY1X6v+5ZxSCNYEE0HDruQstyTgy/pwB+V0mn7jzRNUkBTQ0+1gxyb3YEjPT2K3GJVW5Dx4dF4IPVb5jf7j9y8wKV2UlMQkiJielIEnSLCIp97sZdYTQV6FWX5AOhF14U/0ewNJGnaFJl/QGZZYz5LKn+gFI79SNwQRTm5Jn3xwqTtG4/9oEZ6ZtX0=
-  file: 
-  - terraform-provider-quantum_linux_x64
-  - terraform-provider-quantum_darwin_x64
-  - terraform-provider-quantum_x64.exe
-  on:
-    repo: coveo/terraform-provider-quantum
-    tags: true
+after_success:
+  - test ${TRAVIS_TAG:0:1} = v && curl -sL https://git.io/goreleaser | bash
 
 notifications:
   email: false
