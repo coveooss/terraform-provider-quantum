@@ -109,7 +109,7 @@ func generatePassword(args *QuantumPasswordArgs) (string, *time.Time, error) {
 	charSets := make([]string, len(categories))
 	categoryCount := 0
 	for category, charSet := range categories {
-		if category == "special" && len(args.specialChars) > 0 {
+		if category == '!' && len(args.specialChars) > 0 {
 			charSets[categoryCount] = args.specialChars
 		} else {
 			charSets[categoryCount] = charSet
@@ -181,23 +181,16 @@ type QuantumPasswordArgs struct {
 }
 
 var (
-	baseSet = map[string]map[rune]int{
-		"lowercase": {'a': 26},
-		"uppercase": {'A': 26},
-		"numeric":   {'0': 10},
-		"special":   {'!': 15},
-	}
+	baseSet    = map[rune]int{'a': 26, 'A': 26, '0': 10, '!': 15}
 	categories = initializeCharSet()
 )
 
-func initializeCharSet() map[string]string {
-	categories := make(map[string]string)
+func initializeCharSet() map[rune]string {
+	categories := make(map[rune]string)
 
-	for category, runeSet := range baseSet {
-		for char, count := range runeSet {
-			for i := 0; i < count; i++ {
-				categories[category] += string(char + rune(i))
-			}
+	for char, count := range baseSet {
+		for i := 0; i < count; i++ {
+			categories[char] += string(char + rune(i))
 		}
 	}
 	return categories
