@@ -30,6 +30,10 @@ func resourceQuantumPassword() *schema.Resource {
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
+			"special_chars": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+			},
 			"password": &schema.Schema{
 				Type:     schema.TypeString,
 				Computed: true,
@@ -105,17 +109,28 @@ func generatePassword(args *QuantumPasswordArgs) (string, *time.Time, error) {
 		return "", nil, fmt.Errorf("The password must be at least %d chars long", len(categories))
 	}
 
+	charSets := make([]string, len(categories))
+	categoryCount := 0
+	for category, charSet := range categories {
+		if category == '!' && len(args.specialChars) > 0 {
+			charSets[categoryCount] = args.specialChars
+		} else {
+			charSets[categoryCount] = charSet
+		}
+		categoryCount++
+	}
+
 	var password string
 	for i := 0; i < args.length; i++ {
 		var group int
-		if i < len(categories)*minimumCharsPerCategory {
+		if i < len(charSets)*minimumCharsPerCategory {
 			// We take at least a minimum number of characters of each categories
-			group = i % len(categories)
+			group = i % len(charSets)
 		} else {
 			// Afterwhile, we pick them randomly
-			group = randInt(len(categories))
+			group = randInt(len(charSets))
 		}
-		chars := categories[group]
+		chars := charSets[group]
 		password += string(chars[randInt(len(chars))])
 	}
 
@@ -142,9 +157,10 @@ func randInt(length int) int {
 
 func getQuantumPasswordArgs(d *schema.ResourceData) *QuantumPasswordArgs {
 	args := &QuantumPasswordArgs{
-		length:     d.Get("length").(int),
-		rotation:   d.Get("rotation").(int),
-		lastUpdate: d.Get("last_update").(string),
+		length:       d.Get("length").(int),
+		rotation:     d.Get("rotation").(int),
+		lastUpdate:   d.Get("last_update").(string),
+		specialChars: d.Get("special_chars").(string),
 	}
 
 	// Setting some default for unspecified values
@@ -157,9 +173,10 @@ func getQuantumPasswordArgs(d *schema.ResourceData) *QuantumPasswordArgs {
 
 // QuantumPasswordArgs contains provided terraform arguments
 type QuantumPasswordArgs struct {
-	length     int
-	rotation   int
-	lastUpdate string
+	length       int
+	rotation     int
+	lastUpdate   string
+	specialChars string
 }
 
 var (
@@ -167,14 +184,13 @@ var (
 	categories = initializeCharSet()
 )
 
-func initializeCharSet() []string {
-	categories := make([]string, len(baseSet))
-	categoryCount := 0
+func initializeCharSet() map[rune]string {
+	categories := make(map[rune]string)
+
 	for char, count := range baseSet {
 		for i := 0; i < count; i++ {
-			categories[categoryCount] += string(char + rune(i))
+			categories[char] += string(char + rune(i))
 		}
-		categoryCount++
 	}
 	return categories
 }

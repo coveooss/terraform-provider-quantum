@@ -60,8 +60,9 @@ resource "quantum_password" "rds_backup_db_password" {
 ```
 #### Argument Reference
 
-- `length`   - (Optional) - Password length [default `20`]
-- `rotation` - (Optional) - Number of days before a new password gets generated. [default `0` = no rotation]
+- `length`        - (Optional) - Password length [default `20`]
+- `rotation`      - (Optional) - Number of days before a new password gets generated. [default `0` = no rotation]
+- `special_chars` - (Optional) - Override the special characters set [default `!"#$%&'()*+,-./`]
 
 > A `rotation` set to negative number means the password expires on each run
 
