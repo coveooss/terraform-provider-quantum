@@ -30,6 +30,10 @@ func resourceQuantumPassword() *schema.Resource {
 				Type:     schema.TypeInt,
 				Optional: true,
 			},
+			"special_chars": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+			},
 			"password": &schema.Schema{
 				Type:     schema.TypeString,
 				Computed: true,
@@ -101,6 +105,12 @@ func update(d *schema.ResourceData, update bool) error {
 }
 
 func generatePassword(args *QuantumPasswordArgs) (string, *time.Time, error) {
+
+	if len(args.specialChars) > 0 {
+		// The special chars is always the last category
+		categories[len(categories)-1] = args.specialChars
+	}
+
 	if args.length < len(categories) {
 		return "", nil, fmt.Errorf("The password must be at least %d chars long", len(categories))
 	}
@@ -142,9 +152,10 @@ func randInt(length int) int {
 
 func getQuantumPasswordArgs(d *schema.ResourceData) *QuantumPasswordArgs {
 	args := &QuantumPasswordArgs{
-		length:     d.Get("length").(int),
-		rotation:   d.Get("rotation").(int),
-		lastUpdate: d.Get("last_update").(string),
+		length:       d.Get("length").(int),
+		rotation:     d.Get("rotation").(int),
+		lastUpdate:   d.Get("last_update").(string),
+		specialChars: d.Get("special_chars").(string),
 	}
 
 	// Setting some default for unspecified values
@@ -157,25 +168,30 @@ func getQuantumPasswordArgs(d *schema.ResourceData) *QuantumPasswordArgs {
 
 // QuantumPasswordArgs contains provided terraform arguments
 type QuantumPasswordArgs struct {
-	length     int
-	rotation   int
-	lastUpdate string
+	length       int
+	rotation     int
+	lastUpdate   string
+	specialChars string
 }
 
 var (
-	baseSet    = map[rune]int{'a': 26, 'A': 26, '0': 10, '!': 15}
+	baseSet    = []map[rune]int{{'a': 26}, {'A': 26}, {'0': 10}, {'!': 15}}
 	categories = initializeCharSet()
 )
 
 func initializeCharSet() []string {
 	categories := make([]string, len(baseSet))
 	categoryCount := 0
-	for char, count := range baseSet {
-		for i := 0; i < count; i++ {
-			categories[categoryCount] += string(char + rune(i))
+
+	for _, runeSet := range baseSet {
+		for char, count := range runeSet {
+			for i := 0; i < count; i++ {
+				categories[categoryCount] += string(char + rune(i))
+			}
+			categoryCount++
 		}
-		categoryCount++
 	}
+
 	return categories
 }
 
