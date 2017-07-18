@@ -46,7 +46,7 @@ data.quantum_list_files.data_files.files = ["./data/file1.txt", "./data/file2.do
 
 ### quantum_password
 
-This resource will generate a password with lowercase, uppercase, numbers and special characters mathing the specified `length`. It will also rotate the password every `'n'` days based on the `rotation` attribute.
+This resource will generate a password with lowercase, uppercase, numbers and special characters matching the specified `length`. It will also rotate the password every `'n'` days based on the `rotation` attribute.
 
 #### Example Usage
 
