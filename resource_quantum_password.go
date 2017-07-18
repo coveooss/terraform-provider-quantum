@@ -105,6 +105,9 @@ func update(d *schema.ResourceData, update bool) error {
 }
 
 func generatePassword(args *QuantumPasswordArgs) (string, *time.Time, error) {
+	if args.length < len(categories) {
+		return "", nil, fmt.Errorf("The password must be at least %d chars long", len(categories))
+	}
 
 	charSets := make([]string, len(categories))
 	categoryCount := 0
@@ -115,10 +118,6 @@ func generatePassword(args *QuantumPasswordArgs) (string, *time.Time, error) {
 			charSets[categoryCount] = charSet
 		}
 		categoryCount++
-	}
-
-	if args.length < len(categories) {
-		return "", nil, fmt.Errorf("The password must be at least %d chars long", len(categories))
 	}
 
 	var password string
