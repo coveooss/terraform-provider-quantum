@@ -106,9 +106,15 @@ func update(d *schema.ResourceData, update bool) error {
 
 func generatePassword(args *QuantumPasswordArgs) (string, *time.Time, error) {
 
-	if len(args.specialChars) > 0 {
-		// The special chars is always the last category
-		categories[len(categories)-1] = args.specialChars
+	charSets := make([]string, len(categories))
+	categoryCount := 0
+	for category, charSet := range categories {
+		if category == "special" && len(args.specialChars) > 0 {
+			charSets[categoryCount] = args.specialChars
+		} else {
+			charSets[categoryCount] = charSet
+		}
+		categoryCount++
 	}
 
 	if args.length < len(categories) {
@@ -118,14 +124,14 @@ func generatePassword(args *QuantumPasswordArgs) (string, *time.Time, error) {
 	var password string
 	for i := 0; i < args.length; i++ {
 		var group int
-		if i < len(categories)*minimumCharsPerCategory {
+		if i < len(charSets)*minimumCharsPerCategory {
 			// We take at least a minimum number of characters of each categories
-			group = i % len(categories)
+			group = i % len(charSets)
 		} else {
 			// Afterwhile, we pick them randomly
-			group = randInt(len(categories))
+			group = randInt(len(charSets))
 		}
-		chars := categories[group]
+		chars := charSets[group]
 		password += string(chars[randInt(len(chars))])
 	}
 
@@ -175,23 +181,25 @@ type QuantumPasswordArgs struct {
 }
 
 var (
-	baseSet    = []map[rune]int{{'a': 26}, {'A': 26}, {'0': 10}, {'!': 15}}
+	baseSet = map[string]map[rune]int{
+		"lowercase": {'a': 26},
+		"uppercase": {'A': 26},
+		"numeric":   {'0': 10},
+		"special":   {'!': 15},
+	}
 	categories = initializeCharSet()
 )
 
-func initializeCharSet() []string {
-	categories := make([]string, len(baseSet))
-	categoryCount := 0
+func initializeCharSet() map[string]string {
+	categories := make(map[string]string)
 
-	for _, runeSet := range baseSet {
+	for category, runeSet := range baseSet {
 		for char, count := range runeSet {
 			for i := 0; i < count; i++ {
-				categories[categoryCount] += string(char + rune(i))
+				categories[category] += string(char + rune(i))
 			}
-			categoryCount++
 		}
 	}
-
 	return categories
 }
 
