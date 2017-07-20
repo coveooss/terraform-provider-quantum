@@ -66,7 +66,7 @@ func resourceQuantumPasswordCreate(d *schema.ResourceData, meta interface{}) err
 }
 
 func update(d *schema.ResourceData, update bool) error {
-	reset := d.HasChange("length")
+	reset := d.HasChange("length") || d.HasChange("special_chars")
 
 	// Get parameters
 	args := getQuantumPasswordArgs(d)
