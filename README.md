@@ -9,14 +9,14 @@ A custom provider for terraform.
 ## Installation
 
 1. Download the latest [release](github.com/coveo/terraform-provider-quantum/releases) for your platform
-2. rename the file to `terraform-provider-quantum`
-3. Copy the file to the same directory as terraform `dirname $(which terraform)` is installed
+1. rename the file to `terraform-provider-quantum`
+1. Copy the file to the same directory as terraform `dirname $(which terraform)` is installed
 
 ## Usage
 
 ### quantum_list_files
 
-#### Example Usage
+#### Example Usage (quantum_list_files)
 
 Returns a list of files from a directory
 
@@ -34,13 +34,13 @@ The output will look like this:
 data.quantum_list_files.data_files.files = ["./data/file1.txt", "./data/file2.docx"]
 ```
 
-#### Argument Reference
+#### Argument Reference (quantum_list_files)
 
 - `folders` - (Optional) - The source list for folders
 - `patterns` - (Optional) - The patterns to match files, uses [golang's filepath.Match](http://godoc.org/path/filepath#Match)
 - `recursive` - (Optional) - Default `false`, walk directory recursively
 
-#### Attributes Reference
+#### Attributes Reference (quantum_list_files)
 
 - `files` - The list of matched files
 
@@ -48,7 +48,7 @@ data.quantum_list_files.data_files.files = ["./data/file1.txt", "./data/file2.do
 
 This resource will generate a password with lowercase, uppercase, numbers and special characters matching the specified `length`. It will also rotate the password every `'n'` days based on the `rotation` attribute.
 
-#### Example Usage
+#### Example Usage (quantum_password)
 
 Generates a random password to be used by other resources
 
@@ -58,7 +58,8 @@ resource "quantum_password" "rds_backup_db_password" {
     rotation = 90
 }
 ```
-#### Argument Reference
+
+#### Argument Reference (quantum_password)
 
 - `length`        - (Optional) - Password length [default `20`]
 - `rotation`      - (Optional) - Number of days before a new password gets generated. [default `0` = no rotation]
@@ -66,14 +67,12 @@ resource "quantum_password" "rds_backup_db_password" {
 
 > A `rotation` set to negative number means the password expires on each run
 
-#### Attributes Reference
+#### Attributes Reference (quantum_password)
 
 - `password`    - Attribute to use in your other resources to set the password
 - `last_update` - Last generation date of the password
 
-
 > Note that on *quantum_password* attribute change, you need to run `apply` twice to get the new password propagated to dependant resources. ([Comment on this behavior](https://github.com/hashicorp/terraform/issues/1123#issuecomment-77442647))
-
 
 ## Develop
 

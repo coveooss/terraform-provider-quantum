@@ -13,6 +13,7 @@ import (
 )
 
 const minimumCharsPerCategory = 2
+const specialChars = '!'
 
 func resourceQuantumPassword() *schema.Resource {
 	return &schema.Resource{
@@ -32,6 +33,7 @@ func resourceQuantumPassword() *schema.Resource {
 			},
 			"special_chars": &schema.Schema{
 				Type:     schema.TypeString,
+				Default:  categories[specialChars],
 				Optional: true,
 			},
 			"password": &schema.Schema{
@@ -105,19 +107,19 @@ func update(d *schema.ResourceData, update bool) error {
 }
 
 func generatePassword(args *QuantumPasswordArgs) (string, *time.Time, error) {
-	if args.length < len(categories) {
-		return "", nil, fmt.Errorf("The password must be at least %d chars long", len(categories))
+	charSets := make([]string, 0, len(categories))
+	for category, charSet := range categories {
+		if category == specialChars {
+			if len(args.specialChars) > 0 {
+				charSets = append(charSets, args.specialChars)
+			}
+		} else {
+			charSets = append(charSets, charSet)
+		}
 	}
 
-	charSets := make([]string, len(categories))
-	categoryCount := 0
-	for category, charSet := range categories {
-		if category == '!' && len(args.specialChars) > 0 {
-			charSets[categoryCount] = args.specialChars
-		} else {
-			charSets[categoryCount] = charSet
-		}
-		categoryCount++
+	if args.length < len(charSets) {
+		return "", nil, fmt.Errorf("The password must be at least %d chars long", len(charSets))
 	}
 
 	var password string
@@ -139,7 +141,6 @@ func generatePassword(args *QuantumPasswordArgs) (string, *time.Time, error) {
 }
 
 func shuffle(password string) string {
-
 	arr := []byte(password)
 
 	for i := 0; i < len(arr); i++ {
@@ -180,7 +181,7 @@ type QuantumPasswordArgs struct {
 }
 
 var (
-	baseSet    = map[rune]int{'a': 26, 'A': 26, '0': 10, '!': 15}
+	baseSet    = map[rune]int{'a': 26, 'A': 26, '0': 10, specialChars: 15}
 	categories = initializeCharSet()
 )
 
