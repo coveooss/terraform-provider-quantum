@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
 )
@@ -25,6 +26,11 @@ func dataSourceQuantumListFiles() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
+			},
+			"include_folder": &schema.Schema{
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  true,
 			},
 			"recursive": &schema.Schema{
 				Type:     schema.TypeBool,
@@ -52,6 +58,7 @@ func dataSourceQuantumListFilesRead(d *schema.ResourceData, m interface{}) error
 		patterns = []string{"*"}
 	}
 
+	includeFolder := d.Get("include_folder").(bool)
 	recursive := d.Get("recursive").(bool)
 
 	var result []string
@@ -63,7 +70,15 @@ func dataSourceQuantumListFilesRead(d *schema.ResourceData, m interface{}) error
 					return err
 				}
 				if matched {
-					result = append(result, filepath.ToSlash(path))
+					addedFile := filepath.ToSlash(path)
+					if !includeFolder {
+						if addedFile == folder {
+							continue
+						}
+
+						addedFile = strings.TrimPrefix(addedFile, folder+"/")
+					}
+					result = append(result, addedFile)
 					break
 				}
 			}
