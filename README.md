@@ -39,7 +39,7 @@ data.quantum_list_files.data_files.files = ["./data/file1.txt", "./data/file2.do
 - `folders` - (Optional) - The source list for folders
 - `patterns` - (Optional) - The patterns to match files, uses [golang's filepath.Match](http://godoc.org/path/filepath#Match)
 - `recursive` - (Optional) - Default `false`, walk directory recursively
-- `include_folder` - (Optional) - Default `true`, include the parent folder in teh results
+- `include_folder` - (Optional) - Default `true`, include the parent folder in the results
 
 #### Attributes Reference (quantum_list_files)
 
