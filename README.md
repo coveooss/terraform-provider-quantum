@@ -45,6 +45,34 @@ data.quantum_list_files.data_files.files = ["./data/file1.txt", "./data/file2.do
 
 - `files` - The list of matched files
 
+### quantum_query_json
+
+#### Example Usage (quantum_query_json)
+
+Queries a json string using GJSON (https://github.com/tidwall/gjson)
+
+```hcl
+data "quantum_query_json" "instance_pricing" {
+  json  = "${data.aws_pricing_product.instance.result}"
+  query = "terms.OnDemand.*.priceDimensions.*.pricePerUnit.USD"
+}
+```
+
+The output will look like this:
+
+```sh
+data.quantum_query_json.result = 0.60435
+```
+
+#### Argument Reference (quantum_query_json)
+
+- `json` - The JSON to query
+- `query` - The query string (with this syntax: https://github.com/tidwall/gjson#path-syntax)
+
+#### Attributes Reference (quantum_query_json)
+
+- `result` - The query result. Depending on the json and query, this could be json, float, string, etc.
+
 ### quantum_password
 
 This resource will generate a password with lowercase, uppercase, numbers and special characters matching the specified `length`. It will also rotate the password every `'n'` days based on the `rotation` attribute.
