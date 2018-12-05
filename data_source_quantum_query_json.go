@@ -21,6 +21,15 @@ func dataSourceQuantumQueryJSON() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 			},
+			"result_list": &schema.Schema{
+				Computed: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+				Type:     schema.TypeList,
+			},
+			"result_map": &schema.Schema{
+				Computed: true,
+				Type:     schema.TypeMap,
+			},
 			"result": &schema.Schema{
 				Type:     schema.TypeString,
 				Computed: true,
@@ -36,6 +45,21 @@ func dataSourceQuantumQueryJSONRead(d *schema.ResourceData, m interface{}) error
 
 	d.SetId(fmt.Sprintf("%d-%d", hashcode.String(json), hashcode.String(query)))
 	d.Set("result", queryResult.String())
+
+	if queryResult.IsArray() {
+		resultList := []string{}
+		for _, value := range queryResult.Array() {
+			resultList = append(resultList, value.String())
+		}
+		d.Set("result_list", resultList)
+	}
+	if queryResult.IsObject() {
+		resultMap := map[string]string{}
+		for key, value := range queryResult.Map() {
+			resultMap[key] = value.String()
+		}
+		d.Set("result_map", resultMap)
+	}
 
 	return nil
 }
