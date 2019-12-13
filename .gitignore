@@ -6,3 +6,5 @@ terraform-provider-quantum
 
 main.tf
 crash.log
+
+*.code-workspace

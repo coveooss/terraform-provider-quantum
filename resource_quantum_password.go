@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform/helper/schema"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const minimumCharsPerCategory = 2
@@ -48,6 +49,10 @@ func resourceQuantumPassword() *schema.Resource {
 				Type:     schema.TypeString,
 				Computed: true,
 			},
+			"bcrypt": &schema.Schema{
+				Type:     schema.TypeString,
+				Computed: true,
+			},
 		},
 	}
 }
@@ -56,12 +61,13 @@ func resourceQuantumPasswordCreate(d *schema.ResourceData, meta interface{}) err
 	// Get parameters
 	args := getQuantumPasswordArgs(d)
 
-	password, genDate, err := generatePassword(args)
+	password, genDate, bcrypt, err := generatePassword(args)
 
 	if err == nil {
 		d.Set("password", password)
 		d.Set("last_update", genDate.Format(time.RFC3339))
 		d.SetId(getMD5Hash(fmt.Sprintf("%s-%v", password, d.Get("last_update"))))
+		d.Set("bcrypt", bcrypt)
 	}
 
 	return err
@@ -92,6 +98,7 @@ func update(d *schema.ResourceData, update bool) error {
 			// was expired, but was not really expired if we consider the new rotation (that
 			// is only available during the update phase).
 			d.Set("previous_password", d.Get("password"))
+			d.Set("previous_bcrypt", d.Get("bcrypt"))
 		}
 		err = resourceQuantumPasswordCreate(d, nil)
 	} else if update {
@@ -100,13 +107,14 @@ func update(d *schema.ResourceData, update bool) error {
 			// This was a false update, so we bring back the previous password
 			d.Set("password", previous)
 			d.Set("previous_password", "")
+			d.Set("bcrypt", d.Get("previous_bcrypt"))
 		}
 	}
 
 	return err
 }
 
-func generatePassword(args *QuantumPasswordArgs) (string, *time.Time, error) {
+func generatePassword(args *QuantumPasswordArgs) (string, *time.Time, string, error) {
 	charSets := make([]string, 0, len(categories))
 	for category, charSet := range categories {
 		if category == specialChars {
@@ -119,7 +127,7 @@ func generatePassword(args *QuantumPasswordArgs) (string, *time.Time, error) {
 	}
 
 	if args.length < len(charSets) {
-		return "", nil, fmt.Errorf("The password must be at least %d chars long", len(charSets))
+		return "", nil, "", fmt.Errorf("The password must be at least %d chars long", len(charSets))
 	}
 
 	var password string
@@ -135,9 +143,15 @@ func generatePassword(args *QuantumPasswordArgs) (string, *time.Time, error) {
 		chars := charSets[group]
 		password += string(chars[randInt(len(chars))])
 	}
+	shuffled := shuffle(password)[:args.length]
+
+	bcrypt, err := bcrypt.GenerateFromPassword([]byte(shuffled), 12)
+	if err != nil {
+		return "", nil, "", fmt.Errorf("Could not create hash %s", err)
+	}
 
 	generated := time.Now()
-	return shuffle(password)[:args.length], &generated, nil
+	return shuffled, &generated, string(bcrypt), nil
 }
 
 func shuffle(password string) string {
