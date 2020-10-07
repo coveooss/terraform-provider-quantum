@@ -10,27 +10,28 @@ import (
 
 func dataSourceQuantumQueryJSON() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceQuantumQueryJSONRead,
+		DeprecationMessage: "Terraform 0.12 supports nested maps. Ex: jsondecode(var.my_variable).attribute1.attribute2",
+		Read:               dataSourceQuantumQueryJSONRead,
 
 		Schema: map[string]*schema.Schema{
-			"json": &schema.Schema{
+			"json": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"query": &schema.Schema{
+			"query": {
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"result_list": &schema.Schema{
+			"result_list": {
 				Computed: true,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Type:     schema.TypeList,
 			},
-			"result_map": &schema.Schema{
+			"result_map": {
 				Computed: true,
 				Type:     schema.TypeMap,
 			},
-			"result": &schema.Schema{
+			"result": {
 				Type:     schema.TypeString,
 				Computed: true,
 			},

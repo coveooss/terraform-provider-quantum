@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,33 +11,34 @@ import (
 
 func dataSourceQuantumListFiles() *schema.Resource {
 	return &schema.Resource{
-		Read: dataSourceQuantumListFilesRead,
+		DeprecationMessage: "Please use `fileset` instead: https://www.terraform.io/docs/configuration/functions/fileset.html",
+		Read:               dataSourceQuantumListFilesRead,
 
 		Schema: map[string]*schema.Schema{
-			"folders": &schema.Schema{
+			"folders": {
 				Type:     schema.TypeList,
 				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 			},
-			"patterns": &schema.Schema{
+			"patterns": {
 				Type:     schema.TypeList,
 				Optional: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
 			},
-			"include_folder": &schema.Schema{
+			"include_folder": {
 				Type:     schema.TypeBool,
 				Optional: true,
 				Default:  true,
 			},
-			"recursive": &schema.Schema{
+			"recursive": {
 				Type:     schema.TypeBool,
 				Optional: true,
 			},
-			"files": &schema.Schema{
+			"files": {
 				Type:     schema.TypeList,
 				Computed: true,
 				Elem: &schema.Schema{
@@ -63,7 +65,15 @@ func dataSourceQuantumListFilesRead(d *schema.ResourceData, m interface{}) error
 
 	var result []string
 	for _, folder := range folders {
-		err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
+		folderInfo, err := os.Stat(folder)
+		if os.IsNotExist(err) {
+			return fmt.Errorf("%s does not exist", folder)
+		}
+		if !folderInfo.IsDir() {
+			return fmt.Errorf("%s is not a dir", folder)
+		}
+
+		err = filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
 			for _, pattern := range patterns {
 				matched, err := filepath.Match(pattern, filepath.Base(path))
 				if err != nil {
