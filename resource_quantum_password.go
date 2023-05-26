@@ -52,9 +52,8 @@ func resourceQuantumPassword() *schema.Resource {
 				Computed: true,
 			},
 			"bcrypt": &schema.Schema{
-				Type:      schema.TypeString,
-				Computed:  true,
-				Sensitive: true,
+				Type:     schema.TypeString,
+				Computed: true,
 			},
 		},
 	}
