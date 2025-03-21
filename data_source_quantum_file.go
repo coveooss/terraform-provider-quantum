@@ -3,11 +3,10 @@ package main
 import (
 	"crypto/sha1"
 	"encoding/hex"
-	"io/ioutil"
 	"os"
 	"path"
 
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func dataSourceQuantumFile() *schema.Resource {
@@ -49,7 +48,7 @@ func resourceLocalFileRead(d *schema.ResourceData, _ interface{}) error {
 		}
 	}
 
-	if err := ioutil.WriteFile(destination, []byte(content), 0777); err != nil {
+	if err := os.WriteFile(destination, []byte(content), 0777); err != nil {
 		return err
 	}
 
