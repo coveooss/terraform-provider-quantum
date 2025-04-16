@@ -21,7 +21,7 @@ func TestQuantumPasswordBasic(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		Providers: testProviders, // global map: map[string]*schema.Provider
+		Providers: testProviders,
 		Steps: []resource.TestStep{
 			{
 				Config: testAccQuantumPasswordResource(12),
@@ -40,7 +40,7 @@ func TestQuantumPasswordBasic(t *testing.T) {
 				),
 			},
 			{
-				// Force a rotation of the password by changing the length.
+				// force a rotation of the password by changing the length.
 				Config: testAccQuantumPasswordResource(10),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr(
@@ -71,13 +71,11 @@ resource "quantum_password" "test" {
 
 func testAccQuantumPasswordBcrypt(resourceName string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-		// Retrieve the resource from state.
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
 			return fmt.Errorf("Not found: %s", resourceName)
 		}
 
-		// Compare the bcrypt hash against the plain password.
 		err := bcrypt.CompareHashAndPassword([]byte(rs.Primary.Attributes["bcrypt"]), []byte(rs.Primary.Attributes["password"]))
 		if err != nil {
 			return fmt.Errorf("Bcrypt does not match: %s (%s)", resourceName, err)

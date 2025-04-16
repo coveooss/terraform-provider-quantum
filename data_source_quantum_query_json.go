@@ -19,7 +19,7 @@ func computeHash(s string) int {
 func dataSourceQuantumQueryJSON() *schema.Resource {
 	return &schema.Resource{
 		DeprecationMessage: "Terraform 0.12 supports nested maps. Ex: jsondecode(var.my_variable).attribute1.attribute2",
-		ReadContext:        dataSourceQuantumQueryJSONRead, // use ReadContext for SDK v2
+		ReadContext:        dataSourceQuantumQueryJSONRead,
 
 		Schema: map[string]*schema.Schema{
 			"json": {
@@ -56,7 +56,6 @@ func dataSourceQuantumQueryJSONRead(ctx context.Context, d *schema.ResourceData,
 	query := d.Get("query").(string)
 	queryResult := gjson.Get(jsonStr, query)
 
-	// Compute an ID based on the hashes of jsonStr and query.
 	d.SetId(fmt.Sprintf("%d-%d", computeHash(jsonStr), computeHash(query)))
 	d.Set("result", queryResult.String())
 
