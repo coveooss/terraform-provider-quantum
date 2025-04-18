@@ -3,7 +3,7 @@
 A custom provider for terraform.
 
 ![Coveo](https://img.shields.io/badge/Coveo-awesome-f58020.svg)
-[![Build Status](https://travis-ci.org/coveo/terraform-provider-quantum.svg?branch=master)](https://travis-ci.org/coveo/terraform-provider-quantum)
+[![Build Status](https://travis-ci.org/coveo/terraform-provider-quantum.svg?branch=main)](https://travis-ci.org/coveo/terraform-provider-quantum)
 [![Go Report Card](https://goreportcard.com/badge/github.com/coveo/terraform-provider-quantum)](https://goreportcard.com/report/github.com/coveo/terraform-provider-quantum)
 
 ## Installation
